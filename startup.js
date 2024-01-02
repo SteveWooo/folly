@@ -1,51 +1,12 @@
 const http = require('http');
 const httpProxy = require('http-proxy');
-const { default: IP2Region } = require('ip2region');
-const express404 = require('./responser/express404');
-
-// 过滤ip的模块
-class IpFilter {
-    config = {}
-    searcher = null
-    constructor(config) {
-        this.config = config
-    }
-
-    Init() {
-        this.searcher = new IP2Region
-    }
-
-    _log(result, logLevel) {
-        console.log(`${logLevel}:${result.country}-${result.province}-${result.city}-${result.isp}`)
-    }
-
-    async Search(ip) {
-        return this.searcher.search(ip)
-    }
-
-    async Filter(ip, logLevel='warn') {
-        const result = await this.Search(ip)
-        if (logLevel === 'info') {
-            this._log(result, logLevel)
-        }
-        if (result.isp === '本机地址') return true
-        if (this.config.ipFilterMode === 'whiteList') {
-            if(!(this.config.ipWhiteList.includes(result.country))) {
-                if (logLevel === 'warn') {
-                    this._log(result, logLevel)
-                }
-                return false;
-            }
-            return true
-        }
-
-        return true
-    }
-}
+const IpFilter = require('./IpFilter')
+const Responser = require('./responser/Responser')
 
 class Service {
     config = {}
     ipFilter = null
+    responser = null
     constructor(config) {
         this.config = config
     }
@@ -53,6 +14,8 @@ class Service {
     async Init() {
         this.ipFilter = new IpFilter(this.config)
         this.ipFilter.Init()
+        this.responser = new Responser(this.config)
+        this.responser.Init()
     }
 
     async Run() {
@@ -64,11 +27,9 @@ class Service {
             req.headers['x-added-header'] = 'proxy-server';
             // ======= 防火墙主要逻辑：=======
             const ip = req.socket.remoteAddress;
-            if ((await this.ipFilter.Filter(ip, false)) === false) {
-                res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
-                res.end(express404({
-                    path: req.url
-                }));
+            const ipFilterRes = await this.ipFilter.Filter(ip, 'warn')
+            if (ipFilterRes.safe === false) {
+                this.responser.Response(req, res, ipFilterRes, 'express404')
                 return;
             }
             // 转发请求到目标服务
