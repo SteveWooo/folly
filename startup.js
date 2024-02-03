@@ -27,7 +27,7 @@ class Service {
             req.headers['x-added-header'] = 'proxy-server';
             // ======= 防火墙主要逻辑：=======
             const ip = req.socket.remoteAddress;
-            const ipFilterRes = await this.ipFilter.Filter(ip, 'warn')
+            const ipFilterRes = await this.ipFilter.Filter(ip, 'warn', req)
             if (ipFilterRes.safe === false) {
                 this.responser.Response(req, res, ipFilterRes, 'express404')
                 return;

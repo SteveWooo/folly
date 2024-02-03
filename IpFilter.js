@@ -10,15 +10,15 @@ module.exports = class IpFilter {
         this.searcher = new IP2Region
     }
 
-    _log(ip, result, logLevel) {
-        console.log(`${logLevel}:${ip} ${result.country}-${result.province}-${result.city}-${result.isp}`)
+    _log(ip, result, logLevel, req) {
+        console.log(`${logLevel}:${ip} ${result.country}-${result.province}-${result.city}-${result.isp}:${req.url}`)
     }
 
     async Search(ip) {
         return this.searcher.search(ip)
     }
 
-    async Filter(ip, logLevel='warn') {
+    async Filter(ip, logLevel='warn', req) {
         const result = await this.Search(ip)
         if (logLevel === 'info') {
             this._log(ip, result, logLevel)
@@ -30,7 +30,7 @@ module.exports = class IpFilter {
         if (this.config.ipFilterMode === 'whiteList') {
             if(!(this.config.ipWhiteList.includes(result.country))) {
                 if (logLevel === 'warn') {
-                    this._log(ip, result, logLevel)
+                    this._log(ip, result, logLevel, req)
                 }
                 return {
                     safe: false,
