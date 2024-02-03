@@ -7,7 +7,7 @@ module.exports = class IpFilter {
     }
 
     Init() {
-        this.searcher = new IP2Region
+        this.searcher = new IP2Region()
     }
 
     _log(ip, result, logLevel, req) {
